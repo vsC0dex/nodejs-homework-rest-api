@@ -5,7 +5,13 @@ const { Contact } = require("../models/contact");
 const { HttpError } = require("../helpers");
 
 const listAllContacts = async (req, res) => {
-  const allContacts = await Contact.find({}, "-createdAt -updatedAt");
+  const { _id: owner } = req.user;
+  const { page = 1, limit = 2 } = req.query;
+  const skip = (page - 1) * limit;
+  const allContacts = await Contact.find({ owner }, "-createdAt -updatedAt", {
+    skip,
+    limit,
+  }).populate("owner", "name email");
   res.json(allContacts);
 };
 
@@ -19,13 +25,14 @@ const getContactById = async (req, res) => {
 };
 
 const addContact = async (req, res) => {
-  const result = await Contact.create(req.body);
+  const { _id: owner } = req.user;
+  const result = await Contact.create({ ...req.body, owner });
   res.status(201).json(result);
 };
 
 const deleteContact = async (req, res) => {
   const { id } = req.params;
-  result = await Contact.findByIdAndDelete(id);
+  const result = await Contact.findByIdAndDelete(id);
   if (!result) {
     throw HttpError(404, `Contact with id:${id} not found`);
   }
